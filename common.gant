@@ -1,0 +1,300 @@
+//
+// Set up standard directory structure
+//
+baseDir = ant.project.baseDir.toString()
+targetDir = baseDir + '/target'
+classesDir = targetDir + '/classes'
+testClassesDir = targetDir + '/test-classes'
+testReportsDir = targetDir + '/test-reports'
+distDir = targetDir + '/dist'
+libDir = baseDir + '/lib'
+srcDir = "$baseDir/src"
+mainSrcDir = srcDir + '/main'
+testSrcDir = srcDir + '/test'
+mainResourceDir = mainSrcDir + '/resources'
+testResourceDir = testSrcDir + '/resources'
+groovyMainSrcDir = mainSrcDir + '/groovy'
+groovyTestSrcDir = testSrcDir + '/groovy'
+javaMainSrcDir = mainSrcDir + '/java'
+javaTestSrcDir = testSrcDir + '/java'
+explodedWarDir = "${targetDir}/exploded-war"
+explodedWarClassesDir = "${explodedWarDir}/WEB-INF/classes"
+explodedWarLibDir = "${explodedWarDir}/WEB-INF/lib"
+explodedZipDir = "${targetDir}/exploded-zip"
+explodedZipLibDir = "${explodedZipDir}/lib"
+
+//
+// Standard settings
+//
+ant.property(file: "$baseDir/build.properties")
+
+moduleName = ant.project.properties['project.name']
+version = ant.project.properties['project.version']
+jarFilename = "${moduleName}-${version}.jar"
+zipFilename = "${moduleName}-${version}.zip"
+
+includeTargets << gant.targets.Clean
+cleanDirectory << [targetDir]
+
+includeTool << gant.tools.Ivy
+
+final libraryRef = 'libraryClasspath'
+final javaClasspathRef = 'javaClasspath'
+groovyClasspathRef = 'groovyClasspath'
+
+final testLibraryRef = 'testLibraryClasspath'
+final javaTestClasspathRef = 'javaTestClasspath'
+groovyTestClasspathRef = 'groovyTestClasspath'
+
+//***************************************************************************
+//
+// FUNCTIONS
+//
+//***************************************************************************
+
+def hasGroovyMain = {
+  new File(groovyMainSrcDir).exists()
+}
+
+def hasGroovyTest = {
+  new File(groovyTestSrcDir).exists()
+}
+
+def hasGroovy = {
+  hasGroovyMain || hasGroovyTest
+}
+
+def hasJavaMain = {
+  new File(javaMainSrcDir).exists()
+}
+
+def hasJavaTest = {
+  new File(javaTestSrcDir).exists()
+}
+
+def hasJava = {
+  hasJavaMain || hasJavaTest
+}
+
+def ivyGet = {
+  System.properties['ivy.retrieve.pattern'] = libDir + '/[conf]/[artifact].[ext]'
+  ivy.retrieve(conf: 'runtime,test', type: 'jar,src')
+}
+
+//***************************************************************************
+//
+// TARGETS
+//
+//***************************************************************************
+
+
+target('_groovy.init': '') { // Set up the Groovy tasks
+  depends('_init_runtime')
+
+  if (hasGroovy()) {
+    ant.taskdef(name: 'groovy', classname: 'org.codehaus.groovy.ant.Groovy', classpathref: libraryRef)
+    ant.taskdef(name: 'groovyc', classname: 'org.codehaus.groovy.ant.Groovyc', classpathref: libraryRef)
+  }
+}
+
+
+target(compile: 'Compile the code') {
+  depends('_groovy.init')
+  ant.mkdir(dir: classesDir)
+
+  if (hasGroovyMain()) {
+    if (hasJavaMain()) {
+      ant.groovyc(srcdir: groovyMainSrcDir, destdir: classesDir) {
+        classpath {
+          path(refid: groovyClasspathRef)
+        }
+        src {
+          pathelement(location: javaMainSrcDir)
+          pathelement(location: groovyMainSrcDir)
+        }
+        ant.javac(debug: 'on')
+      }
+    }
+    else {
+      ant.groovyc(srcdir: groovyMainSrcDir, destdir: classesDir) {
+        classpath {
+          path(refid: groovyClasspathRef)
+        }
+        src {
+          pathelement(location: groovyMainSrcDir)
+        }
+      }
+    }
+  }
+  else {
+    // the "combined compiler" for Groovy will compile Java
+    if (hasJavaMain()) {
+      ant.javac(destdir: classesDir, debug: true, source: '1.6', target: '1.6') {
+        classpath {
+          path(refid: javaClasspathRef)
+        }
+        src {
+          pathelement(location: javaMainSrcDir)
+        }
+      }
+    }
+  }
+
+  if (new File(mainResourceDir).exists()) {
+    ant.copy(todir: classesDir) {
+      fileset(dir: mainResourceDir)
+    }
+  }
+}
+
+
+target('test-compile': 'Compile the testing code') {
+  depends('_init_test', compile)
+  ant.mkdir(dir: testClassesDir)
+
+  if (hasGroovyTest()) {
+    if (hasJavaTest()) {
+      ant.groovyc(destdir: testClassesDir) {
+        classpath {
+          path(refid: groovyTestClasspathRef)
+        }
+        src {
+          pathelement(location: javaTestSrcDir)
+          pathelement(location: groovyTestSrcDir)
+        }
+        ant.javac(debug: 'on')
+      }
+    }
+    else {
+      ant.groovyc(destdir: testClassesDir) {
+        classpath {
+          path(refid: groovyTestClasspathRef)
+        }
+        src {
+          pathelement(location: groovyTestSrcDir)
+        }
+      }
+    }
+  }
+  else {
+    // the "combined compiler" for Groovy will compile Java
+    if (hasJavaTest()) {
+      ant.javac(destdir: testClassesDir, debug: 'on') {
+        classpath {
+          path(refid: javaTestClasspathRef)
+        }
+        src {
+          pathelement(location: javaTestSrcDir)
+        }
+      }
+    }
+  }
+
+  if (new File(testResourceDir).exists()) {
+    ant.copy(todir: testClassesDir) {
+      fileset(dir: testResourceDir)
+    }
+  }
+}
+
+
+target('tests': 'Run test suite') {
+  depends('test-compile')
+
+  ant.mkdir(dir: testReportsDir)
+
+  ant.junit(printsummary: 'yes', haltonfailure: 'yes') {
+    classpath {
+      path(refid: javaTestClasspathRef)
+    }
+
+    formatter(type: 'plain')
+
+    batchtest(fork: 'yes', todir: testReportsDir) {
+      fileset(dir: testClassesDir) {
+        include(name: '**/*Tests.class')
+        exclude(name: '**/Abstract*.class')
+      }
+    }
+  }
+}
+
+
+target('ivy-get': 'Download dependencies via Ivy') {
+  ivyGet()
+}
+
+
+target(rebuild: 'Clean and retest everything') {
+  depends(clean, 'clean-ivy', tests, 'package')
+}
+
+
+target('clean-ivy': 'Clean the ivy cache') {
+  delete(dir: libDir)
+}
+
+
+target('_init_runtime': '') { // set-up classpaths
+  if (moduleName == null) {
+    echo 'Need to specify a module name'
+    System.exit(1)
+  }
+
+  if (version == null) {
+    echo 'Need to specify a module version'
+    System.exit(1)
+  }
+
+  // Does not directly depend on 'ivy-get' for performance
+  if (!new File(libDir + '/runtime').exists()) {
+    ivyGet()
+  }
+
+  ant.path(id: libraryRef) {
+    fileset(dir: libDir + '/runtime', includes: '*.jar')
+  }
+
+  ant.path(id: javaClasspathRef) {
+    pathelement(location: classesDir)
+    path(refid: libraryRef)
+  }
+
+  if (hasGroovyMain()) {
+    ant.path(id: groovyClasspathRef) {
+      pathelement(location: groovyMainSrcDir)
+      path(refid: javaClasspathRef)
+    }
+  }
+}
+
+target('_init_test': '') { // set-up classpaths for testing
+  depends('_init_runtime')
+
+  ant.path(id: testLibraryRef) {
+    fileset(dir: libDir + '/test', includes: '*.jar')
+  }
+
+  ant.path(id: javaTestClasspathRef) {
+    pathelement(location: classesDir)
+    pathelement(location: testClassesDir)
+    path(refid: testLibraryRef)
+  }
+
+  ant.path(id: groovyTestClasspathRef) {
+    pathelement(location: groovyMainSrcDir)
+    pathelement(location: groovyTestSrcDir)
+    path(refid: javaTestClasspathRef)
+  }
+}
+
+target('package': 'Create a JAR file') {
+  depends('compile')
+
+  ant.mkdir(dir: distDir)
+
+  jar(destfile: "${distDir}/${jarFilename}", basedir: classesDir, index: true)
+}
+
+setDefaultTarget('package')
+
