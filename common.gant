@@ -78,6 +78,8 @@ def hasJava = {
 
 def ivyGet = {
   System.properties['ivy.retrieve.pattern'] = libDir + '/[conf]/[artifact].[ext]'
+  ant.mkdir(dir: "${libDir}/runtime")
+  ant.mkdir(dir: "${libDir}/test")
   ivy.retrieve(conf: 'runtime,test', type: 'jar,src')
 }
 
