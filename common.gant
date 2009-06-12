@@ -1,14 +1,22 @@
 //
-// Set up standard directory structure
+// Standard settings
 //
 baseDir = ant.project.baseDir.toString()
-targetDir = baseDir + '/target'
-classesDir = targetDir + '/classes'
+def props = new Properties()
+props.load(new FileInputStream(new File("$baseDir/build.properties")))
+ant.property(name: 'project.name', value: props['project.name'])
+ant.property(name: 'project.version', value: props['project.version'])
+
+//
+// Set up standard directory structure
+//
+targetDir = props['targetDir'] ?: "$baseDir/target"
+classesDir = props['classesDir'] ?: "$targetDir/classes"
 testClassesDir = targetDir + '/test-classes'
 testReportsDir = targetDir + '/test-reports'
-distDir = targetDir + '/dist'
-libDir = baseDir + '/lib'
-srcDir = "$baseDir/src"
+distDir = props['distDir'] ?: "$targetDir/dist"
+libDir = props['libDir'] ?: baseDir+'/lib'
+srcDir = props['srcDir'] ?: "$baseDir/src"
 mainSrcDir = srcDir + '/main'
 testSrcDir = srcDir + '/test'
 mainResourceDir = mainSrcDir + '/resources'
@@ -23,15 +31,10 @@ explodedWarLibDir = "${explodedWarDir}/WEB-INF/lib"
 explodedZipDir = "${targetDir}/exploded-zip"
 explodedZipLibDir = "${explodedZipDir}/lib"
 
-//
-// Standard settings
-//
-ant.property(file: "$baseDir/build.properties")
-
 moduleName = ant.project.properties['project.name']
 version = ant.project.properties['project.version']
-jarFilename = "${moduleName}-${version}.jar"
-zipFilename = "${moduleName}-${version}.zip"
+jarFilename = props['jarFilename'] ?: "${moduleName}-${version}.jar"
+zipFilename = props['zipFilename'] ?: "${moduleName}-${version}.zip"
 
 includeTargets << gant.targets.Clean
 cleanDirectory << [targetDir]
@@ -254,7 +257,7 @@ target('_init_runtime': '') { // set-up classpaths
   }
 
   ant.path(id: libraryRef) {
-    fileset(dir: libDir + '/runtime', includes: '*.jar')
+    fileset(dir: "$libDir/runtime", includes: '*.jar')
   }
 
   ant.path(id: javaClasspathRef) {
@@ -274,7 +277,7 @@ target('_init_test': '') { // set-up classpaths for testing
   depends('_init_runtime')
 
   ant.path(id: testLibraryRef) {
-    fileset(dir: libDir + '/test', includes: '*.jar')
+    fileset(dir: "$libDir/test", includes: '*.jar')
   }
 
   ant.path(id: javaTestClasspathRef) {
