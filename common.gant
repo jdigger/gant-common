@@ -23,6 +23,8 @@ mainResourceDir = mainSrcDir + '/resources'
 testResourceDir = testSrcDir + '/resources'
 groovyMainSrcDir = mainSrcDir + '/groovy'
 groovyTestSrcDir = testSrcDir + '/groovy'
+scalaMainSrcDir = mainSrcDir + '/scala'
+scalaTestSrcDir = testSrcDir + '/scala'
 javaMainSrcDir = mainSrcDir + '/java'
 javaTestSrcDir = testSrcDir + '/java'
 explodedWarDir = "${targetDir}/exploded-war"
@@ -44,10 +46,12 @@ includeTool << gant.tools.Ivy
 final libraryRef = 'libraryClasspath'
 final javaClasspathRef = 'javaClasspath'
 groovyClasspathRef = 'groovyClasspath'
+scalaClasspathRef = 'scalaClasspath'
 
 final testLibraryRef = 'testLibraryClasspath'
 final javaTestClasspathRef = 'javaTestClasspath'
 groovyTestClasspathRef = 'groovyTestClasspath'
+scalaTestClasspathRef = 'scalaTestClasspath'
 
 //***************************************************************************
 //
@@ -65,6 +69,18 @@ def hasGroovyTest = {
 
 def hasGroovy = {
   hasGroovyMain || hasGroovyTest
+}
+
+def hasScalaMain = {
+  new File(scalaMainSrcDir).exists()
+}
+
+def hasScalaTest = {
+  new File(scalaTestSrcDir).exists()
+}
+
+def hasScala = {
+  hasScalaMain || hasScalaTest
 }
 
 def hasJavaMain = {
@@ -103,12 +119,25 @@ target('_groovy.init': '') { // Set up the Groovy tasks
 }
 
 
+target('_scala.init': '') { // Set up the Scala tasks
+  depends('_init_runtime')
+
+  if (hasScala()) {
+    ant.taskdef(resource: 'scala/tools/ant/antlib.xml', classpathref: libraryRef)
+    // ant.taskdef(name: 'groovyc', classname: 'org.codehaus.groovy.ant.Groovyc', classpathref: libraryRef)
+  }
+}
+
+
+//***************
+
 target(compile: 'Compile the code') {
-  depends('_groovy.init')
+  depends('_groovy.init', '_scala.init')
   ant.mkdir(dir: classesDir)
 
   if (hasGroovyMain()) {
     if (hasJavaMain()) {
+      // the "combined compiler" for Groovy will compile Java
       ant.groovyc(srcdir: groovyMainSrcDir, destdir: classesDir) {
         classpath {
           path(refid: groovyClasspathRef)
@@ -132,7 +161,6 @@ target(compile: 'Compile the code') {
     }
   }
   else {
-    // the "combined compiler" for Groovy will compile Java
     if (hasJavaMain()) {
       ant.javac(destdir: classesDir, debug: true, source: '1.6', target: '1.6') {
         classpath {
@@ -141,6 +169,21 @@ target(compile: 'Compile the code') {
         src {
           pathelement(location: javaMainSrcDir)
         }
+      }
+    }
+  }
+
+  if (hasScalaMain()) {
+    ant.scalac(destdir: classesDir) {
+      classpath {
+        path(refid: javaClasspathRef)
+        if (hasGroovyMain()) {
+          path(refid: groovyClasspathRef)
+        }
+        path(refid: scalaClasspathRef)
+      }
+      src {
+        pathelement(location: scalaMainSrcDir)
       }
     }
   }
@@ -158,6 +201,7 @@ target('test-compile': 'Compile the testing code') {
   ant.mkdir(dir: testClassesDir)
 
   if (hasGroovyTest()) {
+    // the "combined compiler" for Groovy will compile Java
     if (hasJavaTest()) {
       ant.groovyc(destdir: testClassesDir) {
         classpath {
@@ -182,7 +226,6 @@ target('test-compile': 'Compile the testing code') {
     }
   }
   else {
-    // the "combined compiler" for Groovy will compile Java
     if (hasJavaTest()) {
       ant.javac(destdir: testClassesDir, debug: 'on') {
         classpath {
@@ -191,6 +234,21 @@ target('test-compile': 'Compile the testing code') {
         src {
           pathelement(location: javaTestSrcDir)
         }
+      }
+    }
+  }
+
+  if (hasScalaTest()) {
+    ant.scalac(destdir: testClassesDir, debug: 'on') {
+      classpath {
+        path(refid: javaTestClasspathRef)
+        if (hasGroovyTest()) {
+          path(refid: groovyTestClasspathRef)
+        }
+        path(refid: scalaTestClasspathRef)
+      }
+      src {
+        pathelement(location: scalaTestSrcDir)
       }
     }
   }
@@ -271,6 +329,16 @@ target('_init_runtime': '') { // set-up classpaths
       path(refid: javaClasspathRef)
     }
   }
+
+  if (hasScalaMain()) {
+    ant.path(id: scalaClasspathRef) {
+      pathelement(location: scalaMainSrcDir)
+      path(refid: javaClasspathRef)
+      if (hasGroovyMain()) {
+        path(refid: groovyClasspathRef)
+      }
+    }
+  }
 }
 
 target('_init_test': '') { // set-up classpaths for testing
@@ -290,6 +358,15 @@ target('_init_test': '') { // set-up classpaths for testing
     pathelement(location: groovyMainSrcDir)
     pathelement(location: groovyTestSrcDir)
     path(refid: javaTestClasspathRef)
+  }
+
+  ant.path(id: scalaTestClasspathRef) {
+    pathelement(location: scalaMainSrcDir)
+    pathelement(location: scalaTestSrcDir)
+    path(refid: javaTestClasspathRef)
+    if (hasGroovyTest()) {
+      path(refid: groovyTestClasspathRef)
+    }
   }
 }
 
