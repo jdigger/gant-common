@@ -4,8 +4,9 @@
 baseDir = ant.project.baseDir.toString()
 def props = new Properties()
 props.load(new FileInputStream(new File("$baseDir/build.properties")))
-ant.property(name: 'project.name', value: props['project.name'])
-ant.property(name: 'project.version', value: props['project.version'])
+props.each {k, v ->
+  ant.property(name: k, value: v)
+}
 
 //
 // Set up standard directory structure
