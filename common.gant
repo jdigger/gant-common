@@ -175,7 +175,7 @@ target(compile: 'Compile the code') {
   }
 
   if (hasScalaMain()) {
-    ant.scalac(destdir: classesDir) {
+    ant.scalac(destdir: classesDir, target: 'jvm-1.5') {
       classpath {
         path(refid: javaClasspathRef)
         if (hasGroovyMain()) {
@@ -240,7 +240,7 @@ target('test-compile': 'Compile the testing code') {
   }
 
   if (hasScalaTest()) {
-    ant.scalac(destdir: testClassesDir, debug: 'on') {
+    ant.scalac(destdir: testClassesDir, target: 'jvm-1.5') {
       classpath {
         path(refid: javaTestClasspathRef)
         if (hasGroovyTest()) {
@@ -277,6 +277,7 @@ target('tests': 'Run test suite') {
     batchtest(fork: 'yes', todir: testReportsDir) {
       fileset(dir: testClassesDir) {
         include(name: '**/*Tests.class')
+        include(name: '**/*Spec.class')
         exclude(name: '**/Abstract*.class')
       }
     }
