@@ -29,7 +29,6 @@ scalaTestSrcDir = testSrcDir + '/scala'
 javaMainSrcDir = mainSrcDir + '/java'
 javaTestSrcDir = testSrcDir + '/java'
 webappMainSrcDir = mainSrcDir + '/webapp'
-webappTestSrcDir = testSrcDir + '/webapp'
 explodedWarDir = "${targetDir}/exploded-war"
 explodedWarClassesDir = "${explodedWarDir}/WEB-INF/classes"
 explodedWarLibDir = "${explodedWarDir}/WEB-INF/lib"
@@ -127,7 +126,6 @@ target('_scala.init': '') { // Set up the Scala tasks
 
   if (hasScala()) {
     ant.taskdef(resource: 'scala/tools/ant/antlib.xml', classpathref: libraryRef)
-    // ant.taskdef(name: 'groovyc', classname: 'org.codehaus.groovy.ant.Groovyc', classpathref: libraryRef)
   }
 }
 
@@ -198,8 +196,14 @@ target(compile: 'Compile the code') {
   }
 
   if (new File(webappMainSrcDir).exists()) {
-    ant.copy(todir: classesDir) {
+    ant.copy(todir: explodedWarDir) {
       fileset(dir: webappMainSrcDir)
+    }
+    ant.copy(todir: explodedWarClassesDir) {
+      fileset(dir: classesDir)
+    }
+    ant.copy(todir: explodedWarLibDir) {
+      fileset(dir: "${libDir}/runtime")
     }
   }
 }
@@ -265,12 +269,6 @@ target('test-compile': 'Compile the testing code') {
   if (new File(testResourceDir).exists()) {
     ant.copy(todir: testClassesDir) {
       fileset(dir: testResourceDir)
-    }
-  }
-
-  if (new File(webappTestSrcDir).exists()) {
-    ant.copy(todir: classesDir) {
-      fileset(dir: webappTestSrcDir)
     }
   }
 }
