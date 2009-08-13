@@ -28,6 +28,8 @@ scalaMainSrcDir = mainSrcDir + '/scala'
 scalaTestSrcDir = testSrcDir + '/scala'
 javaMainSrcDir = mainSrcDir + '/java'
 javaTestSrcDir = testSrcDir + '/java'
+webappMainSrcDir = mainSrcDir + '/webapp'
+webappTestSrcDir = testSrcDir + '/webapp'
 explodedWarDir = "${targetDir}/exploded-war"
 explodedWarClassesDir = "${explodedWarDir}/WEB-INF/classes"
 explodedWarLibDir = "${explodedWarDir}/WEB-INF/lib"
@@ -194,6 +196,12 @@ target(compile: 'Compile the code') {
       fileset(dir: mainResourceDir)
     }
   }
+
+  if (new File(webappMainSrcDir).exists()) {
+    ant.copy(todir: classesDir) {
+      fileset(dir: webappMainSrcDir)
+    }
+  }
 }
 
 
@@ -257,6 +265,12 @@ target('test-compile': 'Compile the testing code') {
   if (new File(testResourceDir).exists()) {
     ant.copy(todir: testClassesDir) {
       fileset(dir: testResourceDir)
+    }
+  }
+
+  if (new File(webappTestSrcDir).exists()) {
+    ant.copy(todir: classesDir) {
+      fileset(dir: webappTestSrcDir)
     }
   }
 }
