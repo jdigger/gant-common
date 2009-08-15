@@ -363,24 +363,24 @@ target('_init_test': '') { // set-up classpaths for testing
   }
 
   ant.path(id: javaTestClasspathRef) {
-    pathelement(location: classesDir)
     pathelement(location: testClassesDir)
     path(refid: testLibraryRef)
+    pathelement(location: classesDir)
   }
 
   ant.path(id: groovyTestClasspathRef) {
-    pathelement(location: groovyMainSrcDir)
     pathelement(location: groovyTestSrcDir)
     path(refid: javaTestClasspathRef)
+    pathelement(location: groovyMainSrcDir)
   }
 
   ant.path(id: scalaTestClasspathRef) {
-    pathelement(location: scalaMainSrcDir)
     pathelement(location: scalaTestSrcDir)
     path(refid: javaTestClasspathRef)
     if (hasGroovyTest()) {
       path(refid: groovyTestClasspathRef)
     }
+    pathelement(location: scalaMainSrcDir)
   }
 }
 
