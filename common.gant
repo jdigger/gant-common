@@ -203,7 +203,9 @@ target(compile: 'Compile the code') {
       fileset(dir: classesDir)
     }
     ant.copy(todir: explodedWarLibDir) {
-      fileset(dir: "${libDir}/runtime")
+      fileset(dir: "${libDir}/runtime") {
+        exclude(name: '**/*-sources.jar')
+      }
     }
   }
 }
