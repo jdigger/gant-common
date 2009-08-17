@@ -125,7 +125,7 @@ def ivyPublishLocal = {
   ivy.resolve(conf: 'runtime', type: 'jar')
   ivy.publish(artifactspattern: "${distDir}/[artifact]-[revision].[ext]", resolver: 'integration',
               pubrevision:"${version}", pubdate: "${new java.text.SimpleDateFormat("yyyyMMddHHmmss").format(new Date())}",
-      			  status: 'integration', forcedeliver: 'true')
+      			  status: 'integration', forcedeliver: 'true', overwrite: 'true')
 }
 
 //***************************************************************************
@@ -329,7 +329,7 @@ target('ivy-get': 'Download dependencies via Ivy') {
 
 
 target('ivy-publish-local': 'Install the package in the local repo') {
-  depends('package')
+  depends('clean', 'tests', 'package')
   ivyPublishLocal()
 }
 
