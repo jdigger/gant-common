@@ -13,5 +13,8 @@ common.gant expects to find a build.properties file with at least these two entr
 project.name=myprojectname
 project.version=######
 
-Finally, common.gant uses Ivy for dependency management, so an ivy.xml is required.
+If you are doing a multi-project build, then you need to also specify
 
+integration.repo.dir=/path/to/integration/repository
+
+Finally, common.gant uses Ivy for dependency management, so an ivy.xml is required.

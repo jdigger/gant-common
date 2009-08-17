@@ -2,8 +2,21 @@
 // Standard settings
 //
 baseDir = ant.project.baseDir.toString()
+
 def props = new Properties()
 props.load(new FileInputStream(new File("$baseDir/build.properties")))
+def integrationDir = props.get('integration.repo.dir')
+if (integrationDir) {
+  def idir = new File(integrationDir)
+
+  // ivy insists on an absolute path name
+  integrationDir = idir.getCanonicalPath()
+  props.put('integration.repo.dir', integrationDir)
+
+  if (!idir.exists()) {
+    ant.mkdir(dir: integrationDir)
+  }
+}
 props.each {k, v ->
   ant.property(name: k, value: v)
 }
@@ -102,6 +115,17 @@ def ivyGet = {
   ant.mkdir(dir: "${libDir}/runtime")
   ant.mkdir(dir: "${libDir}/test")
   ivy.retrieve(conf: 'runtime,test', type: 'jar,src')
+}
+
+def ivyPublishLocal = {
+  if (!ant.project.properties['integration.repo.dir']) {
+    echo 'Need to specify integration.repo.dir in build.properties'
+    System.exit(1)
+  }
+  ivy.resolve(conf: 'runtime', type: 'jar')
+  ivy.publish(artifactspattern: "${distDir}/[artifact]-[revision].[ext]", resolver: 'integration',
+              pubrevision:"${version}", pubdate: "${new java.text.SimpleDateFormat("yyyyMMddHHmmss").format(new Date())}",
+      			  status: 'integration', forcedeliver: 'true')
 }
 
 //***************************************************************************
@@ -301,6 +325,12 @@ target('tests': 'Run test suite') {
 
 target('ivy-get': 'Download dependencies via Ivy') {
   ivyGet()
+}
+
+
+target('ivy-publish-local': 'Install the package in the local repo') {
+  depends('package')
+  ivyPublishLocal()
 }
 
 
